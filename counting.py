@@ -19,7 +19,8 @@ def embed_graph_cycles(graph, size):
         The embedding of the graph.
     """
     if type(graph) is list:
-        return [embed_graph_cycles(g, size) for g in graph]
+        # return numpy array of embeddings
+        return np.array([embed_graph_cycles(g, size) for g in graph])
     
     cycle_counts = count_cycle_sizes(graph)
     return embed_cycle_counts(cycle_counts, size)
@@ -73,4 +74,6 @@ def embed_cycle_counts(cycle_counts, size):
             embedding[cycle_length] = count
         else:
             embedding[0] += count
+    if embedding[0] > 0:
+        print("Warning: {} cycles of length greater than {} were found. Increase the embedding size to avoid this.".format(embedding[0], size))
     return embedding

@@ -17,14 +17,13 @@ def compare_embeddings(embeddings, index = False, verbose = False):
     -------
     num_equal : int
         The number of equal embeddings.
-    num_combinations : int
-        The total number of combinations of embeddings.
     equal_indices : list of tuple of int (optional)
         The indices of the embeddings that are equal.
     """
     num_equal = 0
     equal_indices = []
 
+    # TODO: maybe linear complexity possible?
     for i in range(0, len(embeddings)):
         for j in range(i+1, len(embeddings)):
             if equal_embeddings(embeddings[i], embeddings[j]):
@@ -36,9 +35,9 @@ def compare_embeddings(embeddings, index = False, verbose = False):
         print("Number of equal embeddings: {}/{}".format(num_equal, num_combinations))
     
     if index:
-        return num_equal, num_combinations, equal_indices
+        return num_equal, equal_indices
     else:
-        return num_equal, num_combinations
+        return num_equal
 
 def equal_embeddings(embedding1, embedding2):
     """
@@ -65,5 +64,7 @@ def equal_embeddings(embedding1, embedding2):
         return embedding1 == embedding2
     elif type(embedding1) is str:
         return embedding1 == embedding2
+    elif type(embedding1) is np.str_: # for numpy arrays of strings
+        return embedding1 == embedding2
     else:
-        raise TypeError("Embedding type not recognized.")
+        raise TypeError("Embedding type {} not recognized.".format(type(embedding1)))
