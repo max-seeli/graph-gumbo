@@ -2,3 +2,4 @@ networkx
 matplotlib
 numpy
 pandas
+scikit-learn

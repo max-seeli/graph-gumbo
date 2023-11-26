@@ -21,14 +21,14 @@ def compare_embeddings(embeddings, index = False, verbose = False):
         The indices of the embeddings that are equal.
     """
     num_equal = 0
-    equal_indices = []
+    equal_indices = set()
 
     # TODO: maybe linear complexity possible?
     for i in range(0, len(embeddings)):
         for j in range(i+1, len(embeddings)):
             if equal_embeddings(embeddings[i], embeddings[j]):
                 num_equal += 1
-                equal_indices.append((i, j))
+                equal_indices.add((i, j))
 
     num_combinations = len(embeddings) * (len(embeddings) - 1) // 2
     if verbose:

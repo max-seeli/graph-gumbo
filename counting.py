@@ -19,7 +19,6 @@ def embed_graph_cycles(graph, size):
         The embedding of the graph.
     """
     if type(graph) is list:
-        # return numpy array of embeddings
         return np.array([embed_graph_cycles(g, size) for g in graph])
     
     cycle_counts = count_cycle_sizes(graph)
