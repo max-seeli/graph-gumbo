@@ -1,19 +1,18 @@
 # graph-gumbo
-
-![Gumbo](./img/gumba.png)
-
 Welcome to graph-gumbo! This project is an exploration into the world of graph theory, focusing on the interplay between different graph products and graph embeddings.
 
 ## Project Overview
 Key Components
 
-1. **Graph Products**: We explored three types of graph products - Cartesian, Strong, and Tensor - applying them to combinations of graphs from our dataset with factor graphs.
+1. **Dataset**: We used all connected non-isomorphic graphs with a maximum of 7 nodes.
 
-2. **Factor Graphs**: We explored three types of factor graphs - complete graphs ($K_n$), path graphs ($P_n$), and star graphs ($S_n$) - applying them to graphs from our dataset with graph products.
+2. **Graph Products**: We explored three types of graph products - Cartesian, Strong, and Tensor - applying them to combinations of graphs from our dataset with factor graphs.
 
-3. **Graph Embedding**: The core methodology involved embedding graphs based on cycle counting, capturing the cyclic structures within graphs.
+3. **Factor Graphs**: We explored three types of factor graphs - complete graphs ($K_n$), path graphs ($P_n$), and star graphs ($S_n$) - applying them to graphs from our dataset with graph products.
 
-4. **Baseline Comparison**: Two baselines were established - one using the cycle counting method for original graphs and another using the Weisfeiler-Lehman isomorphism test.
+4. **Graph Embedding**: The core methodology involved embedding graphs based on cycle counting, capturing the cyclic structures within graphs.
+
+5. **Baseline Comparison**: Two baselines were established - one using the cycle counting method for original graphs and another using the Weisfeiler-Lehman isomorphism test.
 
 ## Results
 
@@ -35,7 +34,7 @@ Key Components
 | $S_{13}$  | 185       | 1443   | 7224   |
 
 
-This table showcases the performance of different graph products with various factor graphs. It indicates the number of non-discernible pairs of graphs per method, highlighting the effectiveness of specific combinations.
+This table showcases the performance of different graph products with various factor graphs. It indicates the number of non-discernible pairs of graphs per method, highlighting the effectiveness of specific combinations. NOTE: The Weisfeiler-Lehman embedding has a total of **20** non-discernible pairs for the same dataset.
 
 ### t-SNE Dimensionality Reduction
 
@@ -63,5 +62,6 @@ pip install -r requirements.txt
 conda create --name graph-gumbo --file requirements.txt
 ```
 ## Gumbo
-The name **gumbo** pays homage to the [Gumbo](https://en.wikipedia.org/wiki/Gumbo) dish, which is a stew that combines a variety of ingredients to create a delicious meal. Similarly, this project combines a variety of graph products to create a powerful graph embedding.
+The name **gumbo** pays homage to the [Gumbo](https://en.wikipedia.org/wiki/Gumbo) dish, which is a stew that combines a variety of ingredients to create a delicious meal. Similarly, this project combines a variety of graph products with factor graphs to create a powerful graph embedding.
 
+![Gumbo](./img/gumba.png)
