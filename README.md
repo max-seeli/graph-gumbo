@@ -1,7 +1,4 @@
 # graph-gumbo
-
-![Gumbo](./img/gumba.png)
-
 Welcome to graph-gumbo! This project is an exploration into the world of graph theory, focusing on the interplay between different graph products and graph embeddings.
 
 ## Project Overview
@@ -63,5 +60,6 @@ pip install -r requirements.txt
 conda create --name graph-gumbo --file requirements.txt
 ```
 ## Gumbo
-The name **gumbo** pays homage to the [Gumbo](https://en.wikipedia.org/wiki/Gumbo) dish, which is a stew that combines a variety of ingredients to create a delicious meal. Similarly, this project combines a variety of graph products to create a powerful graph embedding.
+The name **gumbo** pays homage to the [Gumbo](https://en.wikipedia.org/wiki/Gumbo) dish, which is a stew that combines a variety of ingredients to create a delicious meal. Similarly, this project combines a variety of graph products with factor graphs to create a powerful graph embedding.
 
+![Gumbo](./img/gumba.png)
