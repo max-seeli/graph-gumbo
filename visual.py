@@ -54,7 +54,7 @@ def plot_horizontally(graphs, titles=None, pos=None, figsize=None):
             axes[i].set_title(titles[i])
     plt.show()
 
-def save_pdf(fig, name):
+def save_pdf(fig, name, png_copy=True):
     """
     Saves a figure in the pdf format at 'img/plots'.
 
@@ -64,9 +64,15 @@ def save_pdf(fig, name):
         The figure to save
     name : str
         The name of the file to save the figure to
+    png_copy : bool, optional
+        Whether to also save a png copy of the figure
     """
     if not os.path.exists('img/plots'):
         os.makedirs('img/plots')
     file_name = os.path.join('img/plots', name + '.pdf')
 
     fig.savefig(file_name, format='pdf', dpi=300, bbox_inches='tight',)
+
+    if png_copy:
+        file_name = os.path.join('img/plots/png', name + '.png')
+        fig.savefig(file_name, format='png', dpi=300, bbox_inches='tight',)
