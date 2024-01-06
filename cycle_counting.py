@@ -55,8 +55,6 @@ def embed_cycle_counts(cycle_counts, size):
 
     Parameters
     ----------
-    graph : networkx.Graph
-        The graph to embed.
     cycle_counts : dict
         A dictionary mapping cycle lengths to the number of cycles of that length.
     size : int
