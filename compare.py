@@ -62,7 +62,7 @@ def _compare_embeddings_hash(embeddings):
     equal_indices = set()
 
     def hash_embedding(embedding):
-        return sha256(str(embedding).encode()).hexdigest()
+        return sha256(embedding.tobytes()).hexdigest()
 
     hash_table = {}
     for i, embedding in enumerate(embeddings):
