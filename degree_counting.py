@@ -1,6 +1,36 @@
 import networkx as nx
 import numpy as np
 
+def embed_graph_degree_sequence(graph, size):
+    """
+    Embed a graph into a vector. The vector is of size `size`. The embedding is
+    the embedding of the degree sequence of the graph.
+
+    Parameters
+    ----------
+    graph : networkx.Graph, list of networkx.Graph
+        The graph to embed.
+    size : int
+        The size of the vector to embed into.
+    
+    Returns
+    -------
+    embedding : numpy.ndarray
+        The embedding of the graph.
+    """
+    if type(graph) is list:
+        return np.array([embed_graph_degree_sequence(g, size) for g in graph])
+    
+    degree_sequence = sorted([d for n, d in graph.degree()], reverse=True)
+
+    if len(degree_sequence) > size:
+        print("Warning: the degree sequence of the graph has more elements than the embedding size. The degree sequence will be truncated.")
+        degree_sequence = degree_sequence[:size]
+    else:
+        pad_length = size - len(degree_sequence)
+        degree_sequence = degree_sequence + [0] * pad_length
+    return np.array(degree_sequence, dtype=np.int32)
+
 def embed_graph_degrees(graph, size):
     """
     Embed a graph into a vector. The vector is of size `size`. The embedding is
