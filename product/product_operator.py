@@ -52,25 +52,3 @@ PRODUCTS = {
     'Modular': modular_product,
     'Lexicographic': nx.lexicographic_product,
 }
-
-def get_all_products(graph, factor_graph):
-    """
-    Get the all the available products of a graph and a factor graph.
-    Also works with a list of graphs.
-
-    Parameters
-    ----------
-    graph : networkx.Graph, list of networkx.Graph
-        The graph or graphs to get the products of.
-    factor_graph : networkx.Graph
-        The factor graph to get the products of.
-
-    Returns
-    -------
-    products : dict
-        A dictionary mapping the product name to the product graph (or list of graph products).
-    """
-    if type(graph) is list:
-        return {name: [product(g, factor_graph) for g in graph] for name, product in PRODUCTS.items()}
-    return {name: product[name](graph, factor_graph) for name, product in PRODUCTS.items()}
-    
