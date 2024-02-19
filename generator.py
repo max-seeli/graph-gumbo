@@ -1,9 +1,10 @@
 import product.factor as factor
 import product.product_operator as product_operator
+from counting import embed_graph
 
 import pandas as pd
 
-def generate_graph_product_table(graphs, products=None, factors=None):
+def generate_graph_product_table(graphs, products=None, factors=None, embedding=None):
     """
     Generate a table with a list of graph products for each combination of
     product operator and factor graph.
@@ -19,11 +20,14 @@ def generate_graph_product_table(graphs, products=None, factors=None):
     factors : dict {str: networkx.Graph} or None (default)
         The factor graphs to generate the products of. If None, all available
         factors are generated.
-
+    embedding : dict or None (default)
+        A dictionary for the embedding configuration to use for the product
+        graphs. If None, no embeddings are used.
+        
     Returns
     -------
     product_table : pd.DataFrame
-        A table of the products of the graphs and factor graphs.
+        A table of the (embedded) products of the graphs and factor graphs.  
     """
     if products is None:
         products = product_operator.PRODUCTS.keys()
@@ -38,6 +42,13 @@ def generate_graph_product_table(graphs, products=None, factors=None):
 
     for factor_name, factor_graph in factors.items():
         for product_name, product_function in product_dict.items():
-            product_table.loc[factor_name, product_name] = [product_function(graph, factor_graph) for graph in graphs]
+            transformed = []
+            for graph in graphs:
+                graph = product_function(graph, factor_graph)
+                if embedding is not None:
+                    transformed.append(embed_graph(graph, **embedding))
+                else:
+                    transformed.append(graph)
+            product_table.loc[factor_name, product_name] = transformed
 
     return product_table
