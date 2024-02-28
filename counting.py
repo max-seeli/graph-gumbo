@@ -1,7 +1,7 @@
 import networkx as nx
 import numpy as np
 
-def count_cycle_sizes(graph):
+def count_basis_cycle_sizes(graph):
     """
     Count the number of cycles of each length for a graph.
     
@@ -17,6 +17,28 @@ def count_cycle_sizes(graph):
     """
     cycle_counts = {}
     for cycle in nx.cycle_basis(graph):
+        cycle_length = len(cycle)
+        if cycle_length not in cycle_counts:
+            cycle_counts[cycle_length] = 0
+        cycle_counts[cycle_length] += 1
+    return cycle_counts
+
+def count_chordless_cycle_sizes(graph):
+    """
+    Count the number of chordless cycles of each length for a graph.
+    
+    Parameters
+    ----------
+    graph : networkx.Graph
+        The graph to count.
+    
+    Returns
+    -------
+    cycle_counts : dict
+        A dictionary mapping cycle lengths to the number of cycles of that length.
+    """
+    cycle_counts = {}
+    for cycle in nx.chordless_cycles(graph):
         cycle_length = len(cycle)
         if cycle_length not in cycle_counts:
             cycle_counts[cycle_length] = 0
@@ -70,7 +92,12 @@ def count_degree_sequence(graph):
 operations = {
     "basis_cycle": {
         "name": "Cycle basis",
-        "count_function": count_cycle_sizes,
+        "count_function": count_basis_cycle_sizes,
+        "overflow_idx": 0,
+    },
+    "chordless_cycle": {
+        "name": "Chordless cycle",
+        "count_function": count_chordless_cycle_sizes,
         "overflow_idx": 0,
     },
     "degree": {
