@@ -38,11 +38,11 @@ def modular_product(G, H):
     # Add edges based on the conditions
     for (u, v) in M.nodes():
         for (u_prime, v_prime) in M.nodes():
-            if u != u_prime and v != v_prime:
-                condition1 = G.has_edge(u, u_prime) and H.has_edge(v, v_prime)
-                condition2 = not G.has_edge(u, u_prime) and not H.has_edge(v, v_prime)
-                if condition1 or condition2:
-                    M.add_edge((u, v), (u_prime, v_prime))
+            condition1 = G.has_edge(u, u_prime) and H.has_edge(v, v_prime)
+            condition2 = (not G.has_edge(u, u_prime) and not H.has_edge(v, v_prime) 
+                          and u != u_prime and v != v_prime)
+            if condition1 or condition2:
+                M.add_edge((u, v), (u_prime, v_prime))
     return M
 
 PRODUCTS = {

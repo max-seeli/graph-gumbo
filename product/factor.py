@@ -16,7 +16,7 @@ __FACTORS = {
     },
 }
 
-def get_factor_dict(sizes, factors=None):
+def get_factor_dict(sizes, factors=None, sep_self_loop_node=False):
     """
     Get a set of factor graphs of different sizes.
     
@@ -36,6 +36,13 @@ def get_factor_dict(sizes, factors=None):
     if factors is None:
         factors = __FACTORS.keys()
     factor_set = {__FACTORS[f]["short_name"].format(n): __FACTORS[f]["generator"](n) for f in factors for n in sizes}
+    
+    if sep_self_loop_node:
+        for k, v in factor_set.items():
+            non_existing_node = max(v.nodes()) + 1
+            v.add_edge(non_existing_node, non_existing_node)
+            factor_set[k] = v
+    
     return factor_set
 
 FACTORS = {k: v["generator"] for k, v in __FACTORS.items()}
