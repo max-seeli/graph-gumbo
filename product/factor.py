@@ -39,8 +39,8 @@ def get_factor_dict(sizes, factors=None, sep_self_loop_node=False):
     
     if sep_self_loop_node:
         for k, v in factor_set.items():
-            non_existing_node = max(v.nodes()) + 1
-            v.add_edge(non_existing_node, non_existing_node)
+            non_existing_node = "S"
+            v.add_edge("S", "S")
             factor_set[k] = v
     
     return factor_set
