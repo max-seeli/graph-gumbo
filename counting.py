@@ -1,6 +1,7 @@
 from __future__ import annotations
 import networkx as nx
 import numpy as np
+from tqdm import tqdm
 
 from typing import List, Union, Callable, Dict, Any, Hashable
 from collections import defaultdict
@@ -24,7 +25,7 @@ class GraphEmbedding:
         self.count_function = count_function
         self.overflow_idx = overflow_idx
 
-    def __call__(self, graph: Union[nx.Graph, List[nx.Graph]], size: int):
+    def __call__(self, graph: Union[nx.Graph, List[nx.Graph]], size: int, verbose: bool = False):
         """
         Embed a `graph` into a vector. The vector is of size `size`. The
         embedding is generated from the `self.count_function`.
@@ -42,7 +43,8 @@ class GraphEmbedding:
             The embedding of the graph.
         """
         if type(graph) is list:
-            return np.array([self.__call__(g, size) for g in graph])
+            iter_graphs = tqdm(graph) if verbose else graph
+            return np.array([self.__call__(g, size) for g in iter_graphs])
 
         counts = self.count_function(graph)
         return self._embed_counts(counts, size)
@@ -187,7 +189,8 @@ class StructureEmbedding(GraphEmbedding):
     def __call__(self, 
                  graph: Union[nx.Graph, List[nx.Graph]],
                  size: int,
-                 rule: StructRule = None) -> np.ndarray:
+                 rule: StructRule = None,
+                 verbose: bool = False) -> np.ndarray:
         """
         Embed a graph into a vector. The vector is of size `size`. The
         embedding is generated from the `self.count_function` over the
@@ -210,7 +213,8 @@ class StructureEmbedding(GraphEmbedding):
             The embedding of the graph.
         """
         if type(graph) is list:
-            return np.array([self.__call__(g, size, rule) for g in graph])
+            iter_graphs = tqdm(graph) if verbose else graph
+            return np.array([self.__call__(g, size, rule) for g in iter_graphs])
 
         if rule is None:
             return super().__call__(graph, size)
@@ -273,6 +277,7 @@ class StructureEmbedding(GraphEmbedding):
             struct_counts[struct_size] += 1
         return categorized_structure_counts
 
+
 class BasisCycleEmbedding(StructureEmbedding):
 
     def __init__(self):
@@ -293,6 +298,30 @@ class ChordlessCycleEmbedding(StructureEmbedding):
         The chordless cycle embedder counts the number of chordless cycles in a graph.
         """
         super().__init__(nx.chordless_cycles)
+
+class TriangleEmbedding(StructureEmbedding):
+
+    def __init__(self):
+        """
+        Initialize the triangle embedder.
+
+        The triangle embedder counts the number of triangles in a graph.
+        """
+        super().__init__(self.all_triangles)
+
+    def all_triangles(self, G):
+        sorted_edges = []
+        for edge in G.edges():
+            sorted_edges.append(tuple(sorted(edge)))
+        sorted_edges.sort()
+
+        triangles = []
+        for i in range(0, len(sorted_edges) - 1):
+            for j in range(i + 1, len(sorted_edges)):
+                if sorted_edges[i][0] == sorted_edges[j][0]:
+                    if G.has_edge(sorted_edges[i][1], sorted_edges[j][1]):
+                        triangles.append((sorted_edges[i][0], sorted_edges[i][1], sorted_edges[j][1]))
+        return triangles
 
 class DegreeEmbedding(GraphEmbedding):
 
