@@ -5,8 +5,10 @@ Comparing the performance of the regular dataset as well as a transformed datase
 import os
 import torch
 import torch.nn.functional as F
+import networkx as nx
 from torch_geometric.datasets import TUDataset
 from torch_geometric.loader import DataLoader
+from torch_geometric.utils import to_networkx, from_networkx
 from sklearn.metrics import f1_score
 
 from model import GraphSAGE
@@ -14,7 +16,24 @@ from model import GraphSAGE
 data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-dataset = TUDataset(data_path, name='NCI1')
+
+def transform(data):
+    """
+    Transform the data object into a cartesian product graph with P_3, where
+    each node gets the respective node features from the original graph.
+    """
+    G = to_networkx(data, node_attrs=['x'], to_undirected=True, remove_self_loops=True)
+    G_T = nx.cartesian_product(G, nx.path_graph(3))
+    
+    for v in G_T.nodes:
+        G_T.nodes[v]['x'] = G.nodes[v[0]]['x']
+
+    G_T.graph['y'] = data.y.clone().detach()
+    data = from_networkx(G_T)
+    return data
+
+
+dataset = TUDataset(data_path, name='NCI1', pre_transform=transform)
 
 torch.manual_seed(12345)
 dataset = dataset.shuffle()
