@@ -11,12 +11,18 @@ from sklearn.metrics import f1_score
 
 from model import GraphSAGE
 
-path = os.path.dirname(os.path.realpath(__file__))
+data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-dataset = TUDataset(path, name='NCI1')
-loader = DataLoader(dataset, batch_size=32, shuffle=True)
+dataset = TUDataset(data_path, name='NCI1')
 
+torch.manual_seed(12345)
+dataset = dataset.shuffle()
+train_dataset = dataset[:len(dataset) // 10 * 8]
+test_dataset = dataset[len(dataset) // 10 * 8:]
+
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
 model = GraphSAGE(dataset.num_features, 3, dataset.num_classes).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
@@ -26,7 +32,7 @@ criterion = F.nll_loss
 def train():
     model.train()
     total_loss = 0
-    for data in loader:
+    for data in train_loader:
         data = data.to(device)
         optimizer.zero_grad()
         out = model(data)
@@ -34,12 +40,12 @@ def train():
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
-    return total_loss / len(loader)
+    return total_loss / len(train_loader)
 
 def test():
     model.eval()
     ys, preds = [], []
-    for data in loader:
+    for data in test_loader:
         data = data.to(device)
         with torch.no_grad():
             out = model(data)
