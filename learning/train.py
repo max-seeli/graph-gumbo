@@ -11,7 +11,8 @@ from torch_geometric.loader import DataLoader
 from torch_geometric.utils import to_networkx, from_networkx
 from sklearn.metrics import f1_score
 
-from model import GraphSAGE
+from model import GraphGAT
+from product.product_operator import modular_product
 
 data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -23,13 +24,13 @@ def transform(data):
     each node gets the respective node features from the original graph.
     """
     G = to_networkx(data, node_attrs=['x'], to_undirected=True, remove_self_loops=True)
-    G_T = nx.cartesian_product(G, nx.path_graph(3))
+    G_T = modular_product(G, nx.path_graph(3))
     
     for v in G_T.nodes:
         G_T.nodes[v]['x'] = G.nodes[v[0]]['x']
 
     G_T.graph['y'] = data.y.clone().detach()
-    data = from_networkx(G_T)
+    data = from_networkx(G_T, group_edge_attrs=['condition'])
     return data
 
 
@@ -43,7 +44,7 @@ test_dataset = dataset[len(dataset) // 10 * 8:]
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
-model = GraphSAGE(dataset.num_features, 3, dataset.num_classes).to(device)
+model = GraphGAT(dataset.num_features, 3, dataset.num_classes).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 criterion = F.nll_loss
 
