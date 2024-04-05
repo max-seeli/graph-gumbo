@@ -1,0 +1,23 @@
+name: graph-gumbo
+channels:
+  - pyg
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.10.13
+  - matplotlib
+  - networkx
+  - numpy
+  - pandas
+  - pillow
+  - pip
+  - pyg
+  - pytorch
+  - scikit-learn
+  - scipy
+  - torchaudio
+  - torchvision
+  - tqdm
+  - pip:
+      - jsonpickle
+      - pyvis
