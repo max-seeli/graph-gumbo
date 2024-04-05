@@ -1,18 +1,18 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import GATConv
+from torch_geometric.nn import SAGEConv
 from torch_geometric.nn import global_add_pool
 
-class GraphGAT(nn.Module):
+class GraphSAGE(nn.Module):
     """
-    GraphGAT model for graph level prediction
+    GraphSAGE model for graph level prediction
     """
     def __init__(self, num_features, num_layers, num_classes):
-        super(GraphGAT, self).__init__()
+        super(GraphSAGE, self).__init__()
         self.convs = nn.ModuleList()
-        self.convs.append(GATConv(num_features, 128))
+        self.convs.append(SAGEConv(num_features, 128))
         for _ in range(num_layers - 1):
-            self.convs.append(GATConv(128, 128))
+            self.convs.append(SAGEConv(128, 128))
         self.seq = nn.Sequential(
             nn.Linear(128, 128),
             nn.ReLU(),
