@@ -42,9 +42,9 @@ def modular_product(G, H):
             condition2 = (not G.has_edge(u, u_prime) and not H.has_edge(v, v_prime) 
                           and u != u_prime and v != v_prime)
             if condition1:
-                M.add_edge((u, v), (u_prime, v_prime), condition = 1)
+                M.add_edge((u, v), (u_prime, v_prime), condition = 0)
             elif condition2:
-                M.add_edge((u, v), (u_prime, v_prime), condition = 2)
+                M.add_edge((u, v), (u_prime, v_prime), condition = 1)
     return M
 
 PRODUCTS = {
