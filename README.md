@@ -6,7 +6,7 @@ Key Components
 
 1. **Dataset**: We used all connected non-isomorphic graphs with a maximum of 7 nodes.
 
-2. **Graph Products**: We explored three types of graph products - Cartesian, Strong, and Tensor - applying them to combinations of graphs from our dataset with factor graphs.
+2. **Graph Products**: We explored five types of graph products - Cartesian, Strong, Tensor, Modular and Lexicographic - applying them to combinations of graphs from our dataset with factor graphs.
 
 3. **Factor Graphs**: We explored three types of factor graphs - complete graphs ($K_n$), path graphs ($P_n$), and star graphs ($S_n$) - applying them to graphs from our dataset with graph products.
 
