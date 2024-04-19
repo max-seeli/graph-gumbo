@@ -1,86 +1,247 @@
 """
-Train a model on the NCI dataset from TU Dortmund.
+Train a model on the 'IMDB-BINARY' dataset from TU Dortmund.
 Comparing the performance of the regular dataset as well as a transformed dataset (product graphs).
 """
 import os
-import shutil
 import torch
 import torch.nn.functional as F
 import networkx as nx
 from torch_geometric.datasets import TUDataset
-from torch_geometric.loader import DataLoader
-from torch_geometric.utils import to_networkx, from_networkx
-from sklearn.metrics import f1_score
+from torch_geometric.utils import degree, to_networkx, from_networkx
+from torch_geometric.transforms import Compose, BaseTransform, LocalDegreeProfile
 
-from model import GraphSAGE
 
-data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
+from model import GraphGIN
+from trainer import PerformanceMetric, GNNTrainer
+
+DATA_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
+CHECKPOINT_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'checkpoints')
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-def transform(data):
+
+class GenerateRootedForrest(BaseTransform):
+
+    def __init__(self, factor):
+        """
+        Initialize the transform with a factor graph.
+
+        Parameters
+        ----------
+        factor : nx.Graph
+            The factor graph to use for generating the rooted forrest.
+        """
+        from product.product_operator import rooted_product_permutation_family
+        self.rppf = rooted_product_permutation_family
+        self.factor = factor
+
+    def forward(self, data):
+        """
+        Generate the rooted forrest for the given graph.
+
+        Parameters
+        ----------
+        data : torch_geometric.data.Data
+            The graph to generate the rooted forrest for.
+
+        Returns
+        -------
+        torch_geometric.data.Data
+            The rooted forrest of the given graph.
+        """
+        target = data.y
+        G = to_networkx(data, to_undirected=True, remove_self_loops=True)
+        G = self.rppf(G, self.factor)
+        data = from_networkx(G)
+        data.y = target
+        return data
+
+class ExperimentConfig:
     """
-    Transform the data object into a cartesian product graph with P_3, where
-    each node gets the respective node features from the original graph.
+    A class to store the configuration of an experiment.
     """
-    G = to_networkx(data, node_attrs=['x'], to_undirected=True, remove_self_loops=True)
-    G_T = nx.cartesian_product(G, nx.path_graph(3))
+
+    def __init__(self, args):
+        """
+        Initialize the configuration with the given transformation.
+
+        Parameters
+        ----------
+        args : argparse.Namespace
+            The arguments to use for the configuration.
+        """
+        self.is_rooted = args.rooted
+        self.dataset = self.get_dataset(self.is_rooted)
+        self.batch_size = args.batch_size
+        self.epochs = args.epochs
+        self.hidden_channels = args.hidden_channels
+        self.num_layers = args.num_layers
+        self.dropout = args.dropout
+        self.lr = args.lr
+        self.gamma = args.gamma
+        self.eval_every = args.eval_every
+        self.train_size = args.train_size
+        self.checkpoint_dir = CHECKPOINT_PATH
+        os.makedirs(self.checkpoint_dir, exist_ok=True)
+
+    def __repr__(self):
+        """
+        Get a string representation of the configuration.
+
+        Returns
+        -------
+        str
+            A string representation of the configuration.
+        """
+        return f'''
+        The configuration is as follows:
+        Dataset         = {self.dataset}
+        Use rooted      = {self.is_rooted}
+        Batch size      = {self.batch_size}
+        Epochs          = {self.epochs}
+        Hidden Channels = {self.hidden_channels}
+        Num Layers      = {self.num_layers}
+        Dropout         = {self.dropout}
+        Learning Rate   = {self.lr}
+        Gamma           = {self.gamma}
+        Eval Every      = {self.eval_every}
+        Train Size      = {self.train_size}
+        Checkpoint Path = {self.checkpoint_dir}
+        '''
+        
+    def get_dataset(self, is_rooted):
+        """
+        Get the dataset with the given transformation.
+
+        Parameters
+        ----------
+        is_rooted : bool
+            Whether to use the rooted product graph transformation.
+
+        Returns
+        -------
+        torch_geometric.datasets.TUDataset
+            The dataset with the given transformation.
+        """
+        if is_rooted:
+            factor = nx.path_graph(2)
+            transform = Compose([GenerateRootedForrest(factor), LocalDegreeProfile()])
+        else:
+            transform = LocalDegreeProfile()
+
+        prefix = 'rooted' if is_rooted else 'normal'    
+        path = os.path.join(DATA_PATH, prefix)
+        os.makedirs(path, exist_ok=True)
+
+        return TUDataset(path, name='IMDB-BINARY', pre_transform=transform)
+
+    def get_splits(self):
+        """
+        Get the training and test splits for the experiment.
+
+        Returns
+        -------
+        tuple
+            The training and test splits for the experiment.
+        """
+        dataset = self.dataset.shuffle()
+        train_dataset = dataset[:len(dataset) // 10 * (self.train_size // 10)]
+        test_dataset = dataset[len(dataset) // 10 * (self.train_size // 10):]
+        return train_dataset, test_dataset
+
+    def get_model(self):
+        """
+        Get the model to use for the experiment.
+
+        Returns
+        -------
+        GraphGIN
+            The model to use for the experiment.
+        """
+        return GraphGIN(in_channels=self.dataset.num_features,
+                        hidden_channels=self.hidden_channels,
+                        out_channels=self.dataset.num_classes,
+                        num_layers=self.num_layers,
+                        dropout=self.dropout,
+                        act="relu",
+                        act_first=False,
+                        norm='batch',
+                        jk="cat").to(device)
     
-    for v in G_T.nodes:
-        G_T.nodes[v]['x'] = G.nodes[v[0]]['x']
 
-    G_T.graph['y'] = data.y.clone().detach()
-    data = from_networkx(G_T, group_edge_attrs=['condition'])
-    return data
+    def get_trainer(self, model):
+        """
+        Get the trainer to use for the experiment.
+
+        Parameters
+        ----------
+        model : GraphGIN
+            The model to use for the experiment.
+
+        Returns
+        -------
+        GNNTrainer
+            The trainer to use for the experiment.
+        """
+        optimizer = torch.optim.AdamW(model.parameters(), lr=self.lr)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=self.gamma)
+        criterion = F.nll_loss
+
+        train_metrics = PerformanceMetric(list(range(self.dataset.num_classes)))
+        val_metrics = PerformanceMetric(list(range(self.dataset.num_classes)))
+
+        train_dataset, test_dataset = self.get_splits()
+        return GNNTrainer(model,
+                          optimizer,
+                          scheduler,
+                          criterion,
+                          self.epochs,
+                          self.eval_every,
+                          train_metrics,
+                          val_metrics,
+                          train_dataset,
+                          test_dataset,
+                          self.batch_size,
+                          self.checkpoint_dir,
+                          device)
+   
+def run(config):
+    """
+    Run an experiment with the given configuration.
+
+    Parameters
+    ----------
+    config : ExperimentConfig
+        The configuration to use for the experiment.
+    """
+    torch.manual_seed(42)
+    
+    print(config)
+
+    model = config.get_model()
+    trainer = config.get_trainer(model)
+    trainer.train()
 
 
-shutil.rmtree(os.path.join(data_path, 'NCI1'), ignore_errors=True)
-dataset = TUDataset(data_path, name='NCI1', pre_transform=transform)
+if __name__ == '__main__':
+    from argparse import ArgumentParser
 
-torch.manual_seed(12345)
-dataset = dataset.shuffle()
-train_dataset = dataset[:len(dataset) // 10 * 8]
-test_dataset = dataset[len(dataset) // 10 * 8:]
+    parser = ArgumentParser(description='Train a GNN on the IMDB-BINARY dataset. (Optionally using rooted product graphs)')
+    parser.add_argument('--rooted', action='store_true', help='Use rooted product graphs')
+    parser.add_argument('--batch_size', type=int, default=64, help='The batch size to use for training')
+    parser.add_argument('--epochs', type=int, default=100, help='The number of epochs to train for')
+    parser.add_argument('--hidden_channels', type=int, default=256, help='The number of hidden channels to use in the GNN')
+    parser.add_argument('--num_layers', type=int, default=3, help='The number of layers to use in the GNN')
+    parser.add_argument('--dropout', type=float, default=0.4, help='The dropout rate to use in the GNN')
+    parser.add_argument('--lr', type=float, default=0.001, help='The learning rate to use for training')
+    parser.add_argument('--gamma', type=float, default=0.99, help='The gamma value to use for the learning rate scheduler')
+    parser.add_argument('--eval_every', type=int, default=2, help='The number of epochs to wait before evaluating the model')
+    parser.add_argument('--train_size', type=int, default=80, help='The number of training graphs to use (in percentage)')
+    args = parser.parse_args()
 
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+    config = ExperimentConfig(args)
+    run(config)
 
-model = GraphSAGE(dataset.num_features, 3, dataset.num_classes).to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-criterion = F.nll_loss
-
-
-def train():
-    model.train()
-    total_loss = 0
-    for data in train_loader:
-        data = data.to(device)
-        optimizer.zero_grad()
-        out = model(data)
-        loss = criterion(out, data.y)
-        loss.backward()
-        optimizer.step()
-        total_loss += loss.item()
-    return total_loss / len(train_loader)
-
-def test():
-    model.eval()
-    ys, preds = [], []
-    for data in test_loader:
-        data = data.to(device)
-        with torch.no_grad():
-            out = model(data)
-        ys.append(data.y)
-        preds.append(out.argmax(dim=1))
-    y, pred = torch.cat(ys), torch.cat(preds)
-    acc = pred.eq(y).sum().item() / y.size(0)
-    f1 = f1_score(y.cpu(), pred.cpu(), average='micro')
-    return acc, f1
-
-
-for epoch in range(1, 101):
-    acc, f1 = test()
-    loss = train()
-    print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Accuracy: {acc:.4f}, F1: {f1:.4f}')
 
 
