@@ -36,14 +36,6 @@ def generate_graph_product_table(graphs, products=None, factors=None, embedding=
     if factors is None:
         factors = factor.get_factor_dict(factor.REDUCED_EXPERIMENT_FACTOR_SIZES)
 
-
-    filename = f"product_tables/{'_'.join(products)}_{'_'.join(factors.keys())}.pkl" 
-    if embedding is None:
-        if not os.path.exists("product_tables"):
-            os.makedirs("product_tables")
-        elif os.path.exists(filename):
-                return pickle.load(open(filename, "rb"))
-
     product_dict = {product_name: product_operator.PRODUCTS[product_name] for product_name in products}
 
     product_table = pd.DataFrame(index=factors.keys(), columns=products)
@@ -60,8 +52,5 @@ def generate_graph_product_table(graphs, products=None, factors=None, embedding=
                 else:
                     transformed.append(graph)
             product_table.loc[factor_name, product_name] = transformed
-
-    if embedding is None:
-        pickle.dump(product_table, open(filename, "wb"))
 
     return product_table

@@ -1,5 +1,6 @@
 import numpy as np
 from hashlib import sha256
+from tqdm import tqdm
     
 def compare_embeddings(embeddings, index = False, exact = False, verbose = False):
     """
@@ -29,9 +30,9 @@ def compare_embeddings(embeddings, index = False, exact = False, verbose = False
         The indices of the embeddings that are equal.
     """
     if exact:
-        num_equal, equal_indices = _compare_embeddings_exact(embeddings)
+        num_equal, equal_indices = _compare_embeddings_exact(embeddings, verbose)
     else:
-        num_equal, equal_indices = _compare_embeddings_hash(embeddings)
+        num_equal, equal_indices = _compare_embeddings_hash(embeddings, verbose)
 
     num_combinations = len(embeddings) * (len(embeddings) - 1) // 2
     if verbose:
@@ -42,7 +43,7 @@ def compare_embeddings(embeddings, index = False, exact = False, verbose = False
     else:
         return num_equal
 
-def _compare_embeddings_hash(embeddings):
+def _compare_embeddings_hash(embeddings, verbose):
     """
     Compare all pairs of embeddings in the given list of embeddings using hashing.
 
@@ -61,11 +62,10 @@ def _compare_embeddings_hash(embeddings):
     num_equal = 0
     equal_indices = set()
 
-    def hash_embedding(embedding):
-        return sha256(embedding.tobytes()).hexdigest()
-
     hash_table = {}
-    for i, embedding in enumerate(embeddings):
+    emb_iter = enumerate(embeddings)
+    emb_iter = tqdm(emb_iter) if verbose else emb_iter
+    for i, embedding in emb_iter:
         hash_value = hash_embedding(embedding)
         if hash_value not in hash_table:
             hash_table[hash_value] = [i]
@@ -82,7 +82,7 @@ def _compare_embeddings_hash(embeddings):
     return num_equal, equal_indices
 
 
-def _compare_embeddings_exact(embeddings):
+def _compare_embeddings_exact(embeddings, verbose):
     """
     Compare all pairs of embeddings in the given list of embeddings exactly.
 
@@ -102,7 +102,9 @@ def _compare_embeddings_exact(embeddings):
     num_equal = 0
     equal_indices = set()
 
-    for i in range(0, len(embeddings)):
+    emb_iter = range(0, len(embeddings))
+    emb_iter = tqdm(emb_iter) if verbose else emb_iter
+    for i in emb_iter:
         for j in range(i+1, len(embeddings)):
             if equal_embeddings(embeddings[i], embeddings[j]):
                 num_equal += 1
@@ -110,18 +112,47 @@ def _compare_embeddings_exact(embeddings):
 
     return num_equal, equal_indices
 
+def hash_embedding(embedding):
+    """
+    Hash an embedding.
+
+    Parameters
+    ----------
+    embedding : numpy.ndarray, int, or str, or set
+        The embedding to hash.
+
+    Returns
+    -------
+    hash_value : str
+        The hash value of the embedding.
+    """
+    t = type(embedding)
+    if type(embedding) is np.ndarray:
+        return sha256(embedding.tobytes()).hexdigest()
+    elif type(embedding) is int:
+        return sha256(str(embedding).encode()).hexdigest()
+    elif type(embedding) is str:
+        return sha256(embedding.encode()).hexdigest()
+    elif type(embedding) is np.str_: # for numpy arrays of strings
+        return sha256(embedding.encode()).hexdigest()
+    elif type(embedding) is set:
+        return sha256(str(sorted(embedding)).encode()).hexdigest()
+    else:
+        raise TypeError("Embedding type {} not recognized.".format(t))
+    
 def equal_embeddings(embedding1, embedding2):
     """
     Compare two embeddings. The embeddings can be of the following types:
     - numpy.ndarray
     - int
     - str
+    - set
 
     Parameters
     ----------
-    embedding1 : numpy.ndarray, int, or str
+    embedding1 : numpy.ndarray, int, or str, or set
         The first embedding to compare.
-    embedding2 : numpy.ndarray, int, or str
+    embedding2 : numpy.ndarray, int, or str, or set
         The second embedding to compare.
 
     Returns
@@ -136,6 +167,8 @@ def equal_embeddings(embedding1, embedding2):
     elif type(embedding1) is str:
         return embedding1 == embedding2
     elif type(embedding1) is np.str_: # for numpy arrays of strings
+        return embedding1 == embedding2
+    elif type(embedding1) is set:
         return embedding1 == embedding2
     else:
         raise TypeError("Embedding type {} not recognized.".format(type(embedding1)))
