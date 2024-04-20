@@ -8,7 +8,8 @@ import torch.nn.functional as F
 import networkx as nx
 from torch_geometric.datasets import TUDataset
 from torch_geometric.utils import degree, to_networkx, from_networkx
-from torch_geometric.transforms import Compose, BaseTransform, LocalDegreeProfile
+from torch_geometric.transforms import Compose, BaseTransform, OneHotDegree
+from sklearn.model_selection import train_test_split
 
 
 from model import GraphGIN
@@ -56,6 +57,41 @@ class GenerateRootedForrest(BaseTransform):
         data = from_networkx(G)
         data.y = target
         return data
+    
+class GenerateRamdomRooted(BaseTransform):
+
+    def __init__(self, factor):
+        """
+        Initialize the transform with a factor graph.
+
+        Parameters
+        ----------
+        factor : nx.Graph
+            The factor graph to use for generating the rooted forrest.
+        """
+        self.factor = factor
+
+    def forward(self, data):
+        """
+        Generate a random rooted product for the given graph.
+
+        Parameters
+        ----------
+        data : torch_geometric.data.Data
+            The graph to generate the rooted forrest for.
+
+        Returns
+        -------
+        torch_geometric.data.Data
+            The rooted forrest of the given graph.
+        """
+        target = data.y
+        G = to_networkx(data, to_undirected=True, remove_self_loops=True)
+        g_root = torch.randint(0, G.number_of_nodes(), (1,)).item()
+        G = nx.rooted_product(self.factor, G, root=g_root)
+        data = from_networkx(G)
+        data.y = target
+        return data
 
 class ExperimentConfig:
     """
@@ -80,6 +116,7 @@ class ExperimentConfig:
         self.dropout = args.dropout
         self.lr = args.lr
         self.gamma = args.gamma
+        self.patience = args.patience
         self.eval_every = args.eval_every
         self.train_size = args.train_size
         self.checkpoint_dir = CHECKPOINT_PATH
@@ -94,9 +131,11 @@ class ExperimentConfig:
         str
             A string representation of the configuration.
         """
+        dataset_balance = self.dataset.data.y.unique(return_counts=True)
         return f'''
         The configuration is as follows:
         Dataset         = {self.dataset}
+        Dataset balance = {dict(zip(dataset_balance[0].tolist(), dataset_balance[1].tolist()))}
         Use rooted      = {self.is_rooted}
         Batch size      = {self.batch_size}
         Epochs          = {self.epochs}
@@ -105,6 +144,7 @@ class ExperimentConfig:
         Dropout         = {self.dropout}
         Learning Rate   = {self.lr}
         Gamma           = {self.gamma}
+        Patience        = {self.patience}
         Eval Every      = {self.eval_every}
         Train Size      = {self.train_size}
         Checkpoint Path = {self.checkpoint_dir}
@@ -126,9 +166,9 @@ class ExperimentConfig:
         """
         if is_rooted:
             factor = nx.path_graph(2)
-            transform = Compose([GenerateRootedForrest(factor), LocalDegreeProfile()])
+            transform = Compose([GenerateRootedForrest(factor), OneHotDegree(136)])
         else:
-            transform = LocalDegreeProfile()
+            transform = OneHotDegree(135)
 
         prefix = 'rooted' if is_rooted else 'normal'    
         path = os.path.join(DATA_PATH, prefix)
@@ -146,9 +186,8 @@ class ExperimentConfig:
             The training and test splits for the experiment.
         """
         dataset = self.dataset.shuffle()
-        train_dataset = dataset[:len(dataset) // 10 * (self.train_size // 10)]
-        test_dataset = dataset[len(dataset) // 10 * (self.train_size // 10):]
-        return train_dataset, test_dataset
+        train, test = train_test_split(range(len(dataset)), train_size=self.train_size/100, stratify=dataset.y)
+        return dataset[train], dataset[test]
 
     def get_model(self):
         """
@@ -185,8 +224,8 @@ class ExperimentConfig:
             The trainer to use for the experiment.
         """
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.lr)
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=self.gamma)
-        criterion = F.nll_loss
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.patience, gamma=self.gamma)
+        criterion = torch.nn.CrossEntropyLoss()
 
         train_metrics = PerformanceMetric(list(range(self.dataset.num_classes)))
         val_metrics = PerformanceMetric(list(range(self.dataset.num_classes)))
@@ -235,7 +274,8 @@ if __name__ == '__main__':
     parser.add_argument('--num_layers', type=int, default=3, help='The number of layers to use in the GNN')
     parser.add_argument('--dropout', type=float, default=0.4, help='The dropout rate to use in the GNN')
     parser.add_argument('--lr', type=float, default=0.001, help='The learning rate to use for training')
-    parser.add_argument('--gamma', type=float, default=0.99, help='The gamma value to use for the learning rate scheduler')
+    parser.add_argument('--gamma', type=float, default=0.5, help='The gamma value to use for the learning rate scheduler')
+    parser.add_argument('--patience', type=int, default=50, help='The number of epochs to wait before reducing the learning rate')
     parser.add_argument('--eval_every', type=int, default=2, help='The number of epochs to wait before evaluating the model')
     parser.add_argument('--train_size', type=int, default=80, help='The number of training graphs to use (in percentage)')
     args = parser.parse_args()

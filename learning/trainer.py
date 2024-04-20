@@ -46,8 +46,8 @@ class PerformanceMetric:
         
         for c in range(len(self.classes)):
             mask = true == c
-            self.total_correct_per_class[c] += predicted_classes[mask].sum().item()
-            self.total_per_class[c] += mask.sum().item()
+            self.total_correct_per_class[c] += correct[mask].sum()
+            self.total_per_class[c] += mask.sum()
 
         self.pred.extend(predicted_classes.tolist())
         self.true.extend(true.tolist())
@@ -99,6 +99,20 @@ class PerformanceMetric:
             The mean class accuracy.
         """
         return sum(self.class_accuracy().values()) / len(self.classes)
+        
+    def confusion_matrix(self):
+        """
+        Compute the confusion matrix.
+
+        Returns
+        -------
+        torch.Tensor
+            The confusion matrix.
+        """
+        cm = torch.zeros(len(self.classes), len(self.classes), dtype=torch.int64)
+        for p, t in zip(self.pred, self.true):
+            cm[t, p] += 1
+        return cm
 
 
 class GNNTrainer:
