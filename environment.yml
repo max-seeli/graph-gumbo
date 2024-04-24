@@ -18,6 +18,8 @@ dependencies:
   - torchaudio
   - torchvision
   - tqdm
+  - gensim
+  - sortedcontainers
   - pip:
       - jsonpickle
       - pyvis
