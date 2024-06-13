@@ -44,11 +44,6 @@ class PerformanceMetric:
         correct = predicted_classes == true
         self.total_correct += correct.sum().item()
         self.total += len(true)
-        print(f'total_correct_per_class cuda device: {self.total_correct_per_class.device}')
-        print(f'correct cuda device: {correct.device}')
-        self.total_correct_per_class = self.total_correct_per_class.to(correct.device)
-        print(f'total_correct_per_class cuda device: {self.total_correct_per_class.device}')
-        print(f'correct cuda device: {correct.device}')
         
         for c in range(len(self.classes)):
             mask = true == c
@@ -119,19 +114,6 @@ class PerformanceMetric:
         for p, t in zip(self.pred, self.true):
             cm[t, p] += 1
         return cm
-    
-    def to(self, device):
-        """
-        Move the metrics to a device.
-
-        Parameters
-        ----------
-        device : torch.device
-            The device to move the metrics to.
-        """
-        print(device)
-        self.total_correct_per_class = self.total_correct_per_class.to(device)
-        self.total_per_class = self.total_per_class.to(device)
 
 
 class GNNTrainer:
