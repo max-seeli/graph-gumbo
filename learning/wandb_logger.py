@@ -14,10 +14,9 @@ class WandBLogger:
         if self.enabled:
             self.login()
             wandb.init(entity="max-seeli",
-                       project="rooted-product-learning")
-            if run_name is None:
-                wandb.run.name = wandb.run.id    
-            else:
+                       project="neural-graph-gumbo")
+            
+            if run_name is not None:
                 wandb.run.name = run_name  
 
             if model is not None:

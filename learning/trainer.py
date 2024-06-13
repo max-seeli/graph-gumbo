@@ -145,32 +145,37 @@ class GNNTrainer:
             
             train_loss = self.train_epoch(epoch)
             train_metrics = self.train_metrics.compute()
+            train_performance = {
+                'train_loss': train_loss,
+                **{f'train_{k}': v for k, v in train_metrics.items()}
+            }
             print(f'[@{epoch}] LR: {self.optimizer.param_groups[0]["lr"]:.6f} | Train Loss: {train_loss:.4f} | Train Acc: {train_metrics["accuracy"]:.4f} | Train Mean Class Acc: {train_metrics["mean_class_accuracy"]:.4f}', end='')
             
             if epoch % self.val_every == 0:
                 val_loss = self.val_epoch(epoch)
                 val_metrics = self.val_metrics.compute()
-
+                val_performance = {
+                    'val_loss': val_loss,
+                    **{f'val_{k}': v for k, v in val_metrics.items()}
+                }
                 if val_metrics['accuracy'] > self.best_val_acc:
                     self.best_val_acc = val_metrics['accuracy']
                     self.save_checkpoint(epoch)
 
                 print(f' | Val Loss: {val_loss:.4f} | Val Acc: {val_metrics["accuracy"]:.4f} | Val Mean Class Acc: {val_metrics["mean_class_accuracy"]:.4f}')
-                self.wandb.log({
-                    'val_loss': val_loss,
-                    **{f'val_{k}': v for k, v in val_metrics.items()}
-                }, commit=False, step=epoch)
+                self.wandb.log(val_performance, commit=False, step=epoch)
             else:
                 print()
 
             self.lr_scheduler.step()
 
-            self.wandb.log({
-                'train_loss': train_loss,
-                **{f'train_{k}': v for k, v in train_metrics.items()}
-            }, commit=True, step=epoch)
 
+            self.wandb.log(train_performance, commit=True, step=epoch)
         self.wandb.finish()
+        return {
+            **train_performance,
+            **val_performance,
+        }
 
     def train_epoch(self, epoch):
         self.model.train()

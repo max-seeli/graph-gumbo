@@ -304,7 +304,7 @@ class StructureEmbedding(CountingEmbedding):
             struct_counts[struct_size] += 1
         return categorized_structure_counts
 
-from basis_cycles import all_mst_basis_cycles, all_path_prod_cycle_basis
+
 class BasisCycleEmbedding(StructureEmbedding):
 
     def __init__(self, **kwargs):
@@ -318,7 +318,7 @@ class BasisCycleEmbedding(StructureEmbedding):
         **kwargs : dict
             Additional keyword arguments to pass to the StructureEmbedding constructor.
         """
-        super().__init__(all_path_prod_cycle_basis, **kwargs)
+        super().__init__(nx.cycle_basis, **kwargs)
 
 
 class ChordlessCycleEmbedding(StructureEmbedding):
@@ -556,4 +556,13 @@ class RootedProductFamilyEmbedding(GraphEmbedding):
 
     def embed(self, graph: nx.Graph):
         
-        return nx.weisfeiler_lehman_graph_hash(rooted_product_permutation_family(graph, self.factor))
+        G = nx.Graph()
+
+        for node in graph.nodes():
+            graph_copy = graph.copy()
+            # Add node attributes
+            for n in graph_copy.nodes():
+                graph_copy.nodes[n]['x'] = 2 if n == node else 1
+            G = nx.disjoint_union(G, graph_copy)
+
+        return nx.weisfeiler_lehman_graph_hash(G, node_attr='x')
