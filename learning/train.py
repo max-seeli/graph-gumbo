@@ -309,7 +309,7 @@ class Experiment:
                 train = train_dataset[train_idx]
                 val = train_dataset[val_idx]
                 run_name = f'{self.config.transform}_{fold}'
-                trainer = self.config.get_trainer(run_name, model, train, val)
+                trainer = self.config.get_trainer(model, run_name, train, val)
                 run_summary = trainer.train()
                 fold_metrics.append(run_summary)
 
