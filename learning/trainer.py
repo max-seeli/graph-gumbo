@@ -118,12 +118,13 @@ class PerformanceMetric:
 
 class GNNTrainer:
     
-    def __init__(self, model, 
+    def __init__(self, run_name, model, 
                  optimizer, lr_scheduler, loss_fn,
                  num_epochs, val_every,
                  train_metrics, val_metrics,
                  train_data, val_data, batch_size,
                  checkpoint_dir, device):
+        self.run_name = run_name
         self.model = model
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
@@ -139,7 +140,7 @@ class GNNTrainer:
 
         self.best_val_acc = 0
 
-        self.wandb = WandBLogger(enabled=True, model=model)
+        self.wandb = WandBLogger(enabled=True, model=model, run_name=self.run_name)
 
     def train(self):
         for epoch in range(self.num_epochs):

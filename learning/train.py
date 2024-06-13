@@ -239,7 +239,7 @@ class ExperimentConfig:
                         jk="cat").to(device)
     
 
-    def get_trainer(self, model, train_dataset=None, val_dataset=None):
+    def get_trainer(self, model, run_name=None, train_dataset=None, val_dataset=None):
         """
         Get the trainer to use for the experiment.
 
@@ -262,7 +262,8 @@ class ExperimentConfig:
 
         if train_dataset is None and val_dataset is None:
             train_dataset, val_dataset = self.get_splits()
-        return GNNTrainer(model,
+        return GNNTrainer(run_name,
+                          model,
                           optimizer,
                           scheduler,
                           criterion,
@@ -307,7 +308,8 @@ class Experiment:
                 model = self.config.get_model()
                 train = train_dataset[train_idx]
                 val = train_dataset[val_idx]
-                trainer = self.config.get_trainer(model, train, val)
+                run_name = f'{self.config.transform}_{fold}'
+                trainer = self.config.get_trainer(run_name, model, train, val)
                 run_summary = trainer.train()
                 fold_metrics.append(run_summary)
 
