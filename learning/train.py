@@ -257,8 +257,8 @@ class ExperimentConfig:
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.patience, gamma=self.gamma)
         criterion = torch.nn.CrossEntropyLoss()
 
-        train_metrics = PerformanceMetric(list(range(self.dataset.num_classes)))
-        val_metrics = PerformanceMetric(list(range(self.dataset.num_classes)))
+        train_metrics = PerformanceMetric(list(range(self.dataset.num_classes)), device=device)
+        val_metrics = PerformanceMetric(list(range(self.dataset.num_classes)), device=device)
 
         if train_dataset is None and val_dataset is None:
             train_dataset, val_dataset = self.get_splits()

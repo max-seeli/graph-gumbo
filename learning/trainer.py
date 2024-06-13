@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 class PerformanceMetric:
 
-    def __init__(self, classes):
+    def __init__(self, classes, device='cpu'):
         """
         A structure to keep track of the performance metrics.
 
@@ -15,6 +15,7 @@ class PerformanceMetric:
             A list of class labels.
         """
         self.classes = classes
+        self.device = device
         self.reset()
 
     def reset(self):
@@ -23,8 +24,8 @@ class PerformanceMetric:
         """
         self.total_correct = 0
         self.total = 0
-        self.total_correct_per_class = torch.zeros(len(self.classes), dtype=torch.int64)
-        self.total_per_class = torch.zeros(len(self.classes), dtype=torch.int64)
+        self.total_correct_per_class = torch.zeros(len(self.classes), dtype=torch.int64, device=self.device)
+        self.total_per_class = torch.zeros(len(self.classes), dtype=torch.int64, device=self.device)
         self.pred = []
         self.true = []
 
@@ -43,6 +44,11 @@ class PerformanceMetric:
         correct = predicted_classes == true
         self.total_correct += correct.sum().item()
         self.total += len(true)
+        print(f'total_correct_per_class cuda device: {self.total_correct_per_class.device}')
+        print(f'correct cuda device: {correct.device}')
+        self.total_correct_per_class = self.total_correct_per_class.to(correct.device)
+        print(f'total_correct_per_class cuda device: {self.total_correct_per_class.device}')
+        print(f'correct cuda device: {correct.device}')
         
         for c in range(len(self.classes)):
             mask = true == c
@@ -123,6 +129,7 @@ class PerformanceMetric:
         device : torch.device
             The device to move the metrics to.
         """
+        print(device)
         self.total_correct_per_class = self.total_correct_per_class.to(device)
         self.total_per_class = self.total_per_class.to(device)
 
@@ -147,9 +154,6 @@ class GNNTrainer:
         self.val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
         self.checkpoint_dir = checkpoint_dir
         self.device = device 
-
-        self.train_metrics.to(device)
-        self.val_metrics.to(device)
 
         self.best_val_acc = 0
 
