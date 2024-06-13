@@ -113,6 +113,18 @@ class PerformanceMetric:
         for p, t in zip(self.pred, self.true):
             cm[t, p] += 1
         return cm
+    
+    def to(self, device):
+        """
+        Move the metrics to a device.
+
+        Parameters
+        ----------
+        device : torch.device
+            The device to move the metrics to.
+        """
+        self.total_correct_per_class = self.total_correct_per_class.to(device)
+        self.total_per_class = self.total_per_class.to(device)
 
 
 class GNNTrainer:
@@ -135,6 +147,9 @@ class GNNTrainer:
         self.val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
         self.checkpoint_dir = checkpoint_dir
         self.device = device 
+
+        self.train_metrics.to(device)
+        self.val_metrics.to(device)
 
         self.best_val_acc = 0
 
