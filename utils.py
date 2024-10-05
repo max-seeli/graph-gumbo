@@ -63,4 +63,22 @@ def results_to_latex(results_df):
 
 
 
+def prepend_dict(d, prepend):
+    """
+    Prepend a string to each key in a dictionary.
+
+    Parameters
+    ----------
+    d : dict
+        The dictionary to prepend to.
+    prepend : str
+        The string to prepend.
+
+    Returns
+    -------
+    dict
+        The dictionary with the prepended keys.
+    """
+    return {prepend + k: v for k, v in d.items()}
+
     
