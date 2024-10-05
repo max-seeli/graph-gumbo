@@ -1,7 +1,8 @@
 import torch
 from torch_geometric.loader import DataLoader
-from wandb_logger import WandBLogger
-from tqdm import tqdm
+
+from utils import prepend_dict
+
 
 class PerformanceMetric:
 
@@ -24,8 +25,10 @@ class PerformanceMetric:
         """
         self.total_correct = 0
         self.total = 0
-        self.total_correct_per_class = torch.zeros(len(self.classes), dtype=torch.int64, device=self.device)
-        self.total_per_class = torch.zeros(len(self.classes), dtype=torch.int64, device=self.device)
+        self.total_correct_per_class = torch.zeros(
+            len(self.classes), dtype=torch.int64, device=self.device)
+        self.total_per_class = torch.zeros(
+            len(self.classes), dtype=torch.int64, device=self.device)
         self.pred = []
         self.true = []
 
@@ -44,7 +47,7 @@ class PerformanceMetric:
         correct = predicted_classes == true
         self.total_correct += correct.sum().item()
         self.total += len(true)
-        
+
         for c in range(len(self.classes)):
             mask = true == c
             self.total_correct_per_class[c] += correct[mask].sum()
@@ -66,7 +69,7 @@ class PerformanceMetric:
             'accuracy': self.accuracy(),
             'mean_class_accuracy': self.mean_class_accuracy(),
         }
-    
+
     def accuracy(self):
         """
         Compute the accuracy.
@@ -77,7 +80,7 @@ class PerformanceMetric:
             The accuracy.
         """
         return self.total_correct / self.total
-    
+
     def class_accuracy(self):
         """
         Compute the class accuracy.
@@ -89,7 +92,7 @@ class PerformanceMetric:
         """
         return {self.classes[i]: self.total_correct_per_class[i].item() / self.total_per_class[i].item()
                 for i in range(len(self.classes))}
-    
+
     def mean_class_accuracy(self):
         """
         Compute the mean class accuracy.
@@ -100,7 +103,7 @@ class PerformanceMetric:
             The mean class accuracy.
         """
         return sum(self.class_accuracy().values()) / len(self.classes)
-        
+
     def confusion_matrix(self):
         """
         Compute the confusion matrix.
@@ -110,21 +113,22 @@ class PerformanceMetric:
         torch.Tensor
             The confusion matrix.
         """
-        cm = torch.zeros(len(self.classes), len(self.classes), dtype=torch.int64)
+        cm = torch.zeros(len(self.classes), len(
+            self.classes), dtype=torch.int64)
         for p, t in zip(self.pred, self.true):
             cm[t, p] += 1
         return cm
 
 
 class GNNTrainer:
-    
-    def __init__(self, run_name, model, 
+
+    def __init__(self, model,
                  optimizer, lr_scheduler, loss_fn,
                  num_epochs, val_every,
-                 train_metrics, val_metrics,
+                 train_metrics: PerformanceMetric, val_metrics: PerformanceMetric,
                  train_data, val_data, batch_size,
-                 checkpoint_dir, device):
-        self.run_name = run_name
+                 checkpoint_dir, device, wandb_logger):
+        self.run_name = wandb_logger.run_name
         self.model = model
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
@@ -133,44 +137,49 @@ class GNNTrainer:
         self.val_every = val_every
         self.train_metrics = train_metrics
         self.val_metrics = val_metrics
-        self.train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
-        self.val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
+        self.train_loader = DataLoader(
+            train_data, batch_size=batch_size, shuffle=True)
+
+        self.val_tester = GNNTester(
+            model, val_metrics, val_data, loss_fn, batch_size, device)
+
+        self.val_loader = DataLoader(
+            val_data, batch_size=batch_size, shuffle=False)
         self.checkpoint_dir = checkpoint_dir
-        self.device = device 
+        self.device = device
 
         self.best_val_acc = 0
+        self.best_val_epoch = 0
 
-        self.wandb = WandBLogger(enabled=True, model=model, run_name=self.run_name)
+        self.wandb = wandb_logger
 
-    def train(self):
+    def train(self, fold=1):
         for epoch in range(self.num_epochs):
-            
+
             train_loss = self.train_epoch(epoch)
             train_metrics = self.train_metrics.compute()
             train_performance = {
                 'train_loss': train_loss,
-                **{f'train_{k}': v for k, v in train_metrics.items()}
+                **prepend_dict(train_metrics, 'train_')
             }
             print(f'[@{epoch}] LR: {self.optimizer.param_groups[0]["lr"]:.6f} | Train Loss: {train_loss:.4f} | Train Acc: {train_metrics["accuracy"]:.4f} | Train Mean Class Acc: {train_metrics["mean_class_accuracy"]:.4f}', end='')
-            
-            if epoch % self.val_every == 0:
-                val_loss = self.val_epoch(epoch)
-                val_metrics = self.val_metrics.compute()
-                val_performance = {
-                    'val_loss': val_loss,
-                    **{f'val_{k}': v for k, v in val_metrics.items()}
-                }
-                if val_metrics['accuracy'] > self.best_val_acc:
-                    self.best_val_acc = val_metrics['accuracy']
-                    self.save_checkpoint(epoch)
 
-                print(f' | Val Loss: {val_loss:.4f} | Val Acc: {val_metrics["accuracy"]:.4f} | Val Mean Class Acc: {val_metrics["mean_class_accuracy"]:.4f}')
+            if epoch % self.val_every == 0:
+                val_performance = self.val_tester.test()
+                val_performance = {
+                    **prepend_dict(val_performance, 'val_')
+                }
+                if val_performance['val_accuracy'] > self.best_val_acc:
+                    self.best_val_acc = val_performance['val_accuracy']
+                    self.save_checkpoint(epoch, fold)
+
+                print(
+                    f' | Val Loss: {val_performance["val_loss"]:.4f} | Val Acc: {val_performance["val_accuracy"]:.4f} | Val Mean Class Acc: {val_performance["val_mean_class_accuracy"]:.4f}')
                 self.wandb.log(val_performance, commit=False, step=epoch)
             else:
                 print()
 
             self.lr_scheduler.step()
-
 
             self.wandb.log(train_performance, commit=True, step=epoch)
         self.wandb.finish()
@@ -196,22 +205,41 @@ class GNNTrainer:
             self.train_metrics.update(out, data.y)
 
         return total_loss / len(self.train_loader)
-    
-    def val_epoch(self, epoch):
+
+    def get_checkpoint_path(self, epoch, fold):
+        return f'{self.checkpoint_dir}/model_{self.run_name}_{fold}_{epoch}.pt'
+
+    def save_checkpoint(self, epoch, fold):
+        torch.save(self.model.state_dict(),
+                   self.get_checkpoint_path(epoch, fold))
+
+
+class GNNTester:
+
+    def __init__(self, model, test_metrics: PerformanceMetric, test_data, loss_fn, batch_size, device):
+        self.model = model
+        self.test_metrics = test_metrics
+        self.loss_fn = loss_fn
+        self.test_loader = DataLoader(
+            test_data, batch_size=batch_size, shuffle=False)
+        self.device = device
+
+    def test(self):
         self.model.eval()
         total_loss = 0
-        self.val_metrics.reset()
+        self.test_metrics.reset()
 
         with torch.no_grad():
-            for data in self.val_loader:
+            for data in self.test_loader:
                 data = data.to(self.device)
                 out = self.model(data)
                 loss = self.loss_fn(out, data.y)
 
                 total_loss += loss.item()
-                self.val_metrics.update(out, data.y)
+                self.test_metrics.update(out, data.y)
 
-        return total_loss / len(self.val_loader)
-    
-    def save_checkpoint(self, epoch):
-        torch.save(self.model.state_dict(), f'{self.checkpoint_dir}/model_{epoch}.pt')
+        result = {
+            'loss': total_loss / len(self.test_loader),
+            **self.test_metrics.compute()
+        }
+        return result
