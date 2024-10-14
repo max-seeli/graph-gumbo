@@ -1,6 +1,10 @@
+from itertools import product
+
 import networkx as nx
 import numpy as np
-from itertools import product
+import pandas as pd
+
+from product import factor
 
 
 def abstract_product(G, H, incidence_table):
@@ -53,6 +57,7 @@ def abstract_product(G, H, incidence_table):
             M.add_edge((u1, v1), (u2, v2))
     return M
 
+
 def all_products(G, H):
     """
     Compute all possible graph products between two graphs.
@@ -75,6 +80,7 @@ def all_products(G, H):
         incidence_table = np.array([int(x) for x in f'0{i:08b}']).reshape(3, 3)
         products[f'Product {i}'] = abstract_product(G, H, incidence_table)
     return products
+
 
 def modular_product(G, H):
     """
@@ -105,21 +111,25 @@ def modular_product(G, H):
     """
     M = nx.Graph()
 
+    def attribute_product(d1, d2): return {k: (
+        d1.get(k), d2.get(k)) for k in set(d1) | set(d2)}
     # Cartesian product of the vertex sets
     for (u, v) in product(G.nodes(), H.nodes()):
-        M.add_node((u, v))
+        # Create cartesian product of all attributes if they exist
+        M.add_node((u, v), **attribute_product(G.nodes[u], H.nodes[v]))
 
     # Add edges based on the conditions
     for (u, v) in M.nodes():
         for (u_prime, v_prime) in M.nodes():
             condition1 = G.has_edge(u, u_prime) and H.has_edge(v, v_prime)
-            condition2 = (not G.has_edge(u, u_prime) and not H.has_edge(v, v_prime) 
+            condition2 = (not G.has_edge(u, u_prime) and not H.has_edge(v, v_prime)
                           and u != u_prime and v != v_prime)
             if condition1:
-                M.add_edge((u, v), (u_prime, v_prime), condition = 0)
+                M.add_edge((u, v), (u_prime, v_prime), condition=0)
             elif condition2:
-                M.add_edge((u, v), (u_prime, v_prime), condition = 1)
+                M.add_edge((u, v), (u_prime, v_prime), condition=1)
     return M
+
 
 def rooted_product_permutation_family(G, F):
     """
@@ -149,22 +159,65 @@ def rooted_product_permutation_family(G, F):
         RPPF = nx.disjoint_union(RPPF, sum_RPPF)
     return RPPF
 
+
 PRODUCTS = {
     'Cartesian': nx.cartesian_product,
     'Strong': nx.strong_product,
-    'Tensor': nx.tensor_product,
+    'Direct': nx.tensor_product,
     'Modular': modular_product,
     'Lexicographic': nx.lexicographic_product,
 }
 
 
-if __name__ == "__main__":
-    G1 = nx.cycle_graph(4)
-    G2 = nx.path_graph(3)
+def generate_graph_product_table(graphs, products=None, factors=None, embedding=None, embedding_size=None):
+    """
+    Generate a table with a list of graph products for each combination of
+    product operator and factor graph.
 
-    # Compute all possible graph products between G1 and G2
-    products = all_products(G1, G2)
+    Parameters
+    ----------
+    graphs : list of networkx.Graph
+        The graphs to generate the products of.
+    products : list of str or None (default)
+        The products to generate (from the available products in the 
+          product.product_operator.PRODUCTS dict). If None, all available
+          products are generated.
+    factors : dict {str: networkx.Graph} or None (default)
+        The factor graphs to generate the products of. If None, all available
+        factors are generated.
+    embedding : GraphEmbedding or None (default)
+        The embedding to use for the products. If None, the products are not
+        embedded.
+    embedding_size : int or None (default)
+        The size of the embedding to use for the products. 
 
-    # Print the number of edges in each product
-    for name, product in products.items():
-        print(f'{name}: {product.number_of_edges()} edges')
+    Returns
+    -------
+    product_table : pd.DataFrame
+        A table of the (embedded) products of the graphs and factor graphs.  
+    """
+    if products is None:
+        products = PRODUCTS.keys()
+    if factors is None:
+        factors = factor.get_factor_dict(
+            factor.REDUCED_EXPERIMENT_FACTOR_SIZES)
+
+    product_dict = {product_name: PRODUCTS[product_name]
+                    for product_name in products}
+
+    product_table = pd.DataFrame(index=factors.keys(), columns=products)
+    product_table.index.name = "Factor Graph"
+    product_table.columns.name = "Graph Product"
+
+    for factor_name, factor_graph in factors.items():
+        for product_name, product_function in product_dict.items():
+            transformed = []
+            for graph in graphs:
+                graph = product_function(graph, factor_graph)
+                if embedding is not None:
+                    transformed.append(embedding(graph, embedding_size))
+                else:
+                    transformed.append(graph)
+            product_table.loc[factor_name, product_name] = transformed
+
+    return product_table

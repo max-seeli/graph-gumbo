@@ -2,66 +2,60 @@
 Welcome to graph-gumbo! This project is an exploration into the world of graph theory, focusing on the interplay between different graph products and graph embeddings.
 
 ## Project Overview
-Key Components
+We approach the problem of embedding a graph in the following manner:
 
-1. **Dataset**: We used all connected non-isomorphic graphs with a maximum of 7 nodes.
+1. **Fixed Factor Graph Products**: We enhance the 	sturctural features of the graph, by applying a graph product with a predetermined factor graph. This step needs to be performed equally on all graphs, to ensure that the embeddings are comparable. We consider the following graph products:
+	- Cartesian Product
 
-2. **Graph Products**: We explored five types of graph products - Cartesian, Strong, Tensor, Modular and Lexicographic - applying them to combinations of graphs from our dataset with factor graphs.
+	<img src="./visual/img/cartesian_product.png" width=300>
+	
+	- Direct Product
 
-3. **Factor Graphs**: We explored three types of factor graphs - complete graphs ($K_n$), path graphs ($P_n$), and star graphs ($S_n$) - applying them to graphs from our dataset with graph products.
+	<img src="./visual/img/direct_product.png" width=300>
 
-4. **Graph Embedding**: The core methodology involved embedding graphs based on cycle counting, capturing the cyclic structures within graphs.
+	- Strong Product
 
-5. **Baseline Comparison**: Two baselines were established - one using the cycle counting method for original graphs and another using the Weisfeiler-Lehman isomorphism test.
+	<img src="./visual/img/strong_product.png" width=300>
+	
+	- Modular Product
 
-## Results
+	<img src="./visual/img/modular_product.png" width=300>
 
-### Absolute Performance
+	And we analyze the effects of the following factor graphs:
 
-| Factor    | Cartesian | Strong | Tensor |
-| ------    | --------- | ------ | ------ |
-| $K_3$     | 1096      | 11795  | 255    |
-| $K_5$     | 1040      | 9086   | 108    |
-| $K_7$     | 1039      | 9086   | 96     |
-| $K_{13}$  | 1039      | 9086   | **95** |
-| $P_3$     | 1407      | 787    | 7311   |
-| $P_5$     | 1404      | 33     | 549    |
-| $P_7$     | 1404      | 11     | 121    |
-| $P_{13}$  | 1404      | **5**  | 49     |
-| $S_3$     | 191       | 1987   | 7263   |
-| $S_5$     | **185**   | 2570   | 7224   |
-| $S_7$     | 185       | 1390   | 7224   |
-| $S_{13}$  | 185       | 1443   | 7224   |
+	- $K_n$: Complete Graph
+	- $P_n$: Path Graph
+	- $S_n$: Star Graph
 
 
-This table showcases the performance of different graph products with various factor graphs. It indicates the number of non-discernible pairs of graphs per method, highlighting the effectiveness of specific combinations. NOTE: The Weisfeiler-Lehman embedding has a total of **20** non-discernible pairs for the same dataset.
+2. **Graph Embeddings**: We then embed the transformed graphs into a vector space by counting the number of occurences of subgstructures with certain sizes. We specifically consider cycles, since they encode rich features about the graph, in the product space. More specifically, we look at the number of
+	- Chordless Cycles, and
+	- Basis Cycles (of a fundamental cycle basis)
+
+	of each length and use their count as features for the embedding.
 
 ### t-SNE Dimensionality Reduction
 
-![t-SNE Original](./img/plots/png/tsne_original.png)
+When looking at the embeddings, that we obtain before and after applying the graph products, we can use t-SNE dimensionality reduction to visualize the embeddings in a 2D space. This allows us to see how the embeddings are distributed and how they compare to each other. Especially interesting is the dispersion that occurs after applying the graph products, which helps distinguish different graphs from each other.
+
+![t-SNE Original](./visual/img/tsne_original_chordless.png)
 
 This plot shows the original graphs (without any graph product) embedded in a 2D space using t-SNE dimensionality reduction. The colors indicate the different number of edges.
 
-![t-SNE Product](./img/plots/png/tsne_product.png)
+![t-SNE Product](./visual/img/tsne_product_chordless.png)
 
 These plots provide a visual representation of the embeddings of the and transformed graphs using t-SNE dimensionality reduction. They illustrate the dispersion and uniformity in the embedding space.
 
-### Conclusion
-The study demonstrates the effectiveness of combining graph products with cycle counting in graph embeddings. Specific combinations, notably the Strong product with path graphs, significantly reduce collisions, enhancing the distinctiveness of graph embeddings, even suprassing the expressiveness of the Weisfeiler-Lehman test. This work suggests new avenues for research and optimization in the field of graph embeddings.
 
 ## Getting Started
-To get started, clone this repository and install the required dependencies. The project is written using Python 3.11.5, and the dependencies can be installed using the following command:
-
-**Pip**
-```
-pip install -r requirements.txt
-```
+To get started, clone this repository and install the required dependencies. The project is written using Python 3.11, and the dependencies can be installed using the following command:
 
 **Conda**
 ```
-conda create --name graph-gumbo --file requirements.txt
+conda create --name graph-gumbo --file environment.yml
 ```
+
 ## Gumbo
 The name **gumbo** pays homage to the [Gumbo](https://en.wikipedia.org/wiki/Gumbo) dish, which is a stew that combines a variety of ingredients to create a delicious meal. Similarly, this project combines a variety of graph products with factor graphs to create a powerful graph embedding.
 
-![Gumbo](./img/gumba.png)
+![Gumbo](./visual/img/gumba.png)

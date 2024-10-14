@@ -193,7 +193,7 @@ class ExperimentConfig:
             gp = GraphProducts[self.graph_product].value
             transform = Compose([
                 BasisCycleTransform(fg, gp, emb_size=self.embedding_size),
-                NormalizeFeatures(),
+                #NormalizeFeatures(),
                 OneHotDegree(max_degree=dataset['max_degree']),
                 T.AddSelfLoops()])
             desc = f'{self.transform}-{self.graph_product}-{self.factor_graph}-{self.factor_size}'

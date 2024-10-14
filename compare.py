@@ -1,8 +1,10 @@
-import numpy as np
 from hashlib import sha256
+
+import numpy as np
 from tqdm import tqdm
-    
-def compare_embeddings(embeddings, index = False, exact = False, verbose = False):
+
+
+def compare_embeddings(embeddings, index=False, exact=False, verbose=False):
     """
     Compare all pairs of embeddings in the given list of embeddings. The function
     can compare the embeddings exactly or using hashing. If compared exactly, the
@@ -30,9 +32,11 @@ def compare_embeddings(embeddings, index = False, exact = False, verbose = False
         The indices of the embeddings that are equal.
     """
     if exact:
-        num_equal, equal_indices = _compare_embeddings_exact(embeddings, verbose)
+        num_equal, equal_indices = _compare_embeddings_exact(
+            embeddings, verbose)
     else:
-        num_equal, equal_indices = _compare_embeddings_hash(embeddings, verbose)
+        num_equal, equal_indices = _compare_embeddings_hash(
+            embeddings, verbose)
 
     num_combinations = len(embeddings) * (len(embeddings) - 1) // 2
     if verbose:
@@ -43,6 +47,7 @@ def compare_embeddings(embeddings, index = False, exact = False, verbose = False
     else:
         return num_equal
 
+
 def _compare_embeddings_hash(embeddings, verbose):
     """
     Compare all pairs of embeddings in the given list of embeddings using hashing.
@@ -51,7 +56,7 @@ def _compare_embeddings_hash(embeddings, verbose):
     ----------
     embeddings : list of numpy.ndarray
         The embeddings to compare.
-    
+
     Returns
     -------
     num_equal : int
@@ -71,14 +76,14 @@ def _compare_embeddings_hash(embeddings, verbose):
             hash_table[hash_value] = [i]
         else:
             hash_table[hash_value].append(i)
-    
+
     for hash_value, indices in hash_table.items():
         if len(indices) > 1:
             num_equal += len(indices) * (len(indices) - 1) // 2
             for i in range(0, len(indices)):
                 for j in range(i+1, len(indices)):
                     equal_indices.add((indices[i], indices[j]))
-    
+
     return num_equal, equal_indices
 
 
@@ -90,7 +95,7 @@ def _compare_embeddings_exact(embeddings, verbose):
     ----------
     embeddings : list of numpy.ndarray
         The embeddings to compare.
-        
+
     Returns
     -------
     num_equal : int
@@ -111,6 +116,7 @@ def _compare_embeddings_exact(embeddings, verbose):
                 equal_indices.add((i, j))
 
     return num_equal, equal_indices
+
 
 def hash_embedding(embedding):
     """
@@ -133,13 +139,14 @@ def hash_embedding(embedding):
         return sha256(str(embedding).encode()).hexdigest()
     elif type(embedding) is str:
         return sha256(embedding.encode()).hexdigest()
-    elif type(embedding) is np.str_: # for numpy arrays of strings
+    elif type(embedding) is np.str_:  # for numpy arrays of strings
         return sha256(embedding.encode()).hexdigest()
     elif type(embedding) is set:
         return sha256(str(sorted(embedding)).encode()).hexdigest()
     else:
         raise TypeError("Embedding type {} not recognized.".format(t))
-    
+
+
 def equal_embeddings(embedding1, embedding2):
     """
     Compare two embeddings. The embeddings can be of the following types:
@@ -161,14 +168,15 @@ def equal_embeddings(embedding1, embedding2):
         True if the embeddings are equal, False otherwise.
     """
     if type(embedding1) is np.ndarray:
-        return np.array_equal(embedding1, embedding2)
+        return np.allclose(embedding1, embedding2)
     elif type(embedding1) is int:
         return embedding1 == embedding2
     elif type(embedding1) is str:
         return embedding1 == embedding2
-    elif type(embedding1) is np.str_: # for numpy arrays of strings
+    elif type(embedding1) is np.str_:  # for numpy arrays of strings
         return embedding1 == embedding2
     elif type(embedding1) is set:
         return embedding1 == embedding2
     else:
-        raise TypeError("Embedding type {} not recognized.".format(type(embedding1)))
+        raise TypeError(
+            "Embedding type {} not recognized.".format(type(embedding1)))

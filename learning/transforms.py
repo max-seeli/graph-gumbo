@@ -55,6 +55,9 @@ class BasisCycleTransform(BaseTransform):
         # self.per_node_basis_cycle(G)
         # bce_rep = bce.unsqueeze(0).repeat(data.num_nodes, 1)
 
+        # normalize the basis cycle embedding
+        per_node_embedding /= per_node_embedding.sum(dim=-1, keepdim=True)
+
         if data.x is not None and self.cat:
             x = data.x.view(-1, 1) if data.x.dim() == 1 else data.x
             data.x = torch.cat([x, per_node_embedding.to(x.dtype)], dim=-1)
