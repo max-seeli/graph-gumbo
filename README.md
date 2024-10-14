@@ -4,22 +4,22 @@ Welcome to graph-gumbo! This project is an exploration into the world of graph t
 ## Project Overview
 We approach the problem of embedding a graph in the following manner:
 
-1. **Fixed Factor Graph Products**: We enhance the 	sturctural features of the graph, by applying a graph product with a predetermined factor graph. This step needs to be performed equally on all graphs, to ensure that the embeddings are comparable. We consider the following graph products:
+1. **Fixed Factor Graph Products**: We enhance the 	sturctural features of the graph, by applying a graph product with a predetermined factor graph. This step needs to be performed equally on all graphs, to ensure that the embeddings are comparable. We consider the following graph products (the following product graphs are the result of the factors $C_4$ and $P_3$:
 	- Cartesian Product
 
-	<img src="./visual/img/cartesian_product.png" width=300>
+		<img src="./visual/img/cartesian_product.png" width=300>
 	
 	- Direct Product
 
-	<img src="./visual/img/direct_product.png" width=300>
+		<img src="./visual/img/direct_product.png" width=300>
 
 	- Strong Product
 
-	<img src="./visual/img/strong_product.png" width=300>
+		<img src="./visual/img/strong_product.png" width=300>
 	
 	- Modular Product
 
-	<img src="./visual/img/modular_product.png" width=300>
+		<img src="./visual/img/modular_product.png" width=300>
 
 	And we analyze the effects of the following factor graphs:
 
